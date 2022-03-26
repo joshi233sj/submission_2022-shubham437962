@@ -1,0 +1,67 @@
+################################################################################
+# Scraping Single Wikipedia Page
+################################################################################
+# This page exctracts links from wikipedia page in a simplistic way:
+from urllib import request
+from bs4 import BeautifulSoup as BS
+import re
+import pandas as pd
+import requests
+################################################################################
+# This part prepares preliminary links - links for lists of links :)
+################################################################################
+url = 'https://en.wikipedia.org/wiki/Lists_of_musicians'
+html = request.urlopen(url)
+bs = BS(html.read(), 'html.parser')
+
+tags = bs.find('span', id='A').parent.find_next_sibling().find_next_sibling().find_all('a')
+
+links = ['http://en.wikipedia.org' + tag['href'] for tag in tags]
+
+################################################################################
+# This part prepares real painter links
+################################################################################
+painter_links = []
+
+for link in links:
+    print(link)
+    html = request.urlopen(link)
+    bs = BS(html.read(), 'html.parser')
+
+    tags = bs.find_all('ul')[1].find_all('li')
+
+    link_temp_list = []
+    for tag in tags:
+        try:
+            link_temp_list.append('http://en.wikipedia.org' + tag.a['href'])
+        except:
+            0
+
+    painter_links.extend(link_temp_list)
+
+################################################################################
+# This part scraps painters
+################################################################################
+d = pd.DataFrame({'name': [], 'Years active': []})
+
+for painter_link in painter_links[:100]:
+    print(painter_link)
+
+    html = request.urlopen(painter_link)
+    bs = BS(html.read(), 'html.parser')
+
+    try:
+        name = bs.find('h1').text
+    except:
+        name = ''
+
+    try:
+        Years_active = bs.find('th', string='Years active').next_sibling.text
+    except:
+        Years_active = ''
+
+
+    painter = {'name': name, 'Years active': Years_active}
+
+    d = d.append(painter, ignore_index=True)
+    print(d)
